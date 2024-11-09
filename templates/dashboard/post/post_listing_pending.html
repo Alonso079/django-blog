@@ -1,0 +1,181 @@
+{% extends 'dashboard/base/base.html' %}
+
+{% block title %} {{ post.title }}| Dashboard {% endblock %}
+{% block custom_css %} 
+img{
+    width:80%;
+    margin:0 auto;
+    border-radius:10px;
+}
+h5{
+    padding-top:30px;
+}
+h3{ padding:10px 0px; color:black; }
+.text_div{display:flex; flex-wrap:wrap;}
+.text_div p{ padding:5px;}
+
+{% endblock %}
+{% load static %}
+{% block body %}
+{% load humanize %}
+
+<div class="container-fluid">
+  {% if messages %}
+<div class="messages" >
+  {% for message in messages %}
+      <div class="alert alert-primary" {% if message.tags %}
+           class="{{ message.tags }}"{% endif %}>{{ message }}
+           <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+      </div>
+
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col">
+        <div class="card shadow mb-4">
+            <div class="row " style="padding: 20px;">
+                <div class="col-10 mx-auto">
+                    <h3>{{ post.title }}</h3>
+                    <div class="text_div">
+                        <p> Publicado bajo : {{ post.categoria }}</p>
+                        <p> Fecha : {{ post.creado_en|naturaltime }}</p>
+                        {% if post.estado == 'activo' %}
+                          <p> Estado : <span style="color: green;"> {{ post.estado }}</span> </p>
+                        {% else %}
+                          <p> Estado : <span style="color: red; background-color: rgb(70, 123, 172); padding: 5px; border-radius: 10px; "> {{ post.estado }}</span> </p>
+                        {% endif %}
+                        {% if post.destacado == True %}
+                          <p > Destacado : <span style="color:green"> Publicación destacada</span> </p>
+                        {% else %}
+                          <p >  Destacado : <span style="color:red"> Aún no destacado</span></p>
+                        {% endif %}
+                    </div>
+                    {% if post.imagen %}
+                    <img src="{{ post.imagen.url }}" alt="">
+                    {% else %}
+                    <img src="" alt="">
+                    {% endif %}
+                    <h5> {{ post.detalle }}</h5>
+                    <div>
+                      {% if post.visible == False %}
+                        <a href=" {% url 'publicacion_visible' post.id %}" class="btn btn-outline-dark btn-sm "><i class="fas fa-eye"></i> Hacer visible </a>
+                      {% else %}
+                        <a href=" {% url 'ocultar_publicacion' post.id %}" class="btn btn-outline-dark btn-sm"><i class="fas fa-eye-slash"></i> Ocultar publicación </a>
+                      {% endif %}
+                        <a href="{% url 'editar_publicacion' post.id %}" class="btn btn-warning btn-sm"><i class="far fa-edit"></i> Editar</a>
+                        <a href=" " class="btn btn-danger btn-sm" data-toggle="modal" data-target="#delete"><i class="far fa-trash-alt" ></i> Eliminar publicación </a>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<section id="mt_blog" class="">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="blog_post_sec blog_post_inner">
+                <div class="row">
+                    {% if post_pendiente %}
+                    {% for post in post_pendiente%}
+                    {% if forloop.counter|divisibleby:2 %}
+                    <div class="col-md-6 col-sm-12 mar-bottom-30">                            
+                        <div class="blog-post_wrapper front-wrapper bg-orange">
+                            <div class="post-content">
+                                <div class="post-category">
+                                    <ul>
+                                        {% for cat in post.categorias.all %}
+                                        {% if forloop.counter|divisibleby:2 %}
+                                        <li class="cat-yellow"><a href="{% url 'categoria' cat.id %}" class="white">{{ cat }}</a></li>
+                                        {% else %}
+                                        <li class="cat-green mar-0"><a href="{% url 'categoria' cat.id %}" class="white">{{ cat }}</a></li>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="post-date">
+                                    <p><a href="#">{{post.creado_en|timesince}}</a></p>
+                                </div>
+                                <h2 class="entry-title">
+                                    <a href="{% url 'ver_publicacion' post.id %}" class="white">{{post.title}}</a>
+                                </h2>
+                                <div class="item-meta white">
+                                    <span>por</span>
+                                    <a class="author-name white" href="author.html">{{ post.author.author.username }}</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="col-md-6 col-sm-12 mar-bottom-30">
+                        <div class="blog-post_wrapper image-wrapper">
+                            <div class="blog-post-image">
+                                <img src="{{ post.imagen_url }}" alt="image" class="img-responsive center-block post_img" />
+                            </div>
+                            <div class="post-content">
+                                <div class="post-category">
+                                    <ul>
+                                        {% for cat in post.categorias.all %}
+                                        {% if forloop.counter|divisibleby:2 %}
+                                        <li class="cat-yellow"><a href="{% url 'categoria' cat.id %}" class="white">{{ cat }}</a></li>
+                                        {% else %}
+                                        <li class="cat-green mar-0"><a href="{% url 'categoria' cat.id %}" class="white">{{ cat }}</a></li>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="post-date">
+                                    <p><a href="#">{{post.creado_en|timesince}}</a></p>
+                                </div>
+                                <h2 class="entry-title">
+                                    <a href="{% url 'ver_publicacion' post.id %}" class="white">{{post.title}}</a>
+                                </h2>
+                                <div class="item-meta white">
+                                    <span>por</span>
+                                    <a class="author-name white" href="author.html">{{post.author.author.username}}</a>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                {% else %}
+                <h3 style="padding: 100px;"> ¡Felicidades! No hay publicaciones pendientes  </h3>
+                {% endif %}
+                </div>    
+            </div>
+        </div>
+    </div>    
+</section>
+
+<!-- Modal ahora -->
+<div class="modal fade" id="delete" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <div class="modal-body">
+          <h4> ¿Estás seguro de que quieres eliminar la publicación? </h4>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+          <form action="{% url 'eliminar_publicacion' post.id %}" method="POST">
+              {% csrf_token %}
+            
+            <input type="submit" class="btn btn-danger" placeholder="Eliminar">
+
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

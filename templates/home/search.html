@@ -1,0 +1,42 @@
+{% extends 'home/base/base.html' %}
+
+{% block title %} Resultados de Búsqueda | MultiBlogs {% endblock %}
+
+{% block body %}
+<div class="container pt-4 pb-4" style="margin-bottom: 70px;">
+    <h3>Resultados para: <b>{{ consulta }}</b></h3>
+    <br>
+    {% if publicaciones %}
+        <div class="row">
+            {% for publicacion in publicaciones %}
+                <div class="col-lg-4 mb-4">
+                    <div class="card border-0 mb-4 box-shadow" style="box-shadow: 1px 2px 5px 6px #ececec; padding: 10px;">
+                        <img class="card-img-top" src="{{ publicacion.url_imagen }}" alt="{{ publicacion.titulo }}">
+                        <div class="card-body px-0 pb-0 d-flex flex-column align-items-start">
+                            <h4 class="font-weight-bold">
+                                <a class="text-dark" href="{% url 'ver_publicacion' publicacion.pk %}">{{ publicacion.titulo }}</a>
+                            </h4>
+                            <p class="card-text">{{ publicacion.detalle|truncatechars:100 }}</p>
+                            <small class="d-block">
+                                <a class="text-muted" href="#">{{ publicacion.autor.usuario.username }}</a> en {{ publicacion.categoria.nombre }}
+                            </small>
+                            <small class="text-muted">{{ publicacion.creado_en|timesince }} atrás | {{ publicacion.conteo_visitas }} visitas</small>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            No se encontraron resultados para tu búsqueda.
+        </div>
+        <h5>Sugerencias:</h5>
+        <ul>
+            <li>Asegúrate de que todas las palabras estén correctamente escritas.</li>
+            <li>Intenta con diferentes palabras clave.</li>
+            <li>Prueba con términos más generales.</li>
+            <li>Utiliza menos palabras clave.</li>
+        </ul>
+    {% endif %}
+</div>
+{% endblock %}

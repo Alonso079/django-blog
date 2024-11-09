@@ -1,0 +1,42 @@
+{% extends 'dashboard/base/base.html' %}
+{% block title %} {{ user.autor.usuario.username }} | Perfil {% endblock %}
+{% block custom_css %}
+.p_image{
+    width:100%;
+    height:auto;
+    border-radius:20px;
+}
+.btn a{
+    color:white;
+}
+.main_wrapper{
+    height:100vh;
+}
+{% endblock %}
+
+{% block body %}
+<div class="col">
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-primary" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+<div class="row main_wrapper">
+    <div class="col-6 col-md-4">
+        {% if user.autor.imagen_autor %}
+        <img class="p_image" src="{{ user.autor.imagen_autor.url }}" alt="">
+        {% else %}
+        <img class="p_image" src="https://genslerzudansdentistry.com/wp-content/uploads/2015/11/anonymous-user.png" alt="">
+        {% endif %}
+    </div>
+    <div class="col-12 col-md-8">
+        <button class="btn btn-dark float-right btn-sm"><a href="{% url 'editar_perfil' %}"> <i class="far fa-edit"></i> Editar perfil </a></button>
+        <h3>@{{ user.autor.usuario.username }}</h3>
+        <h5>{{ user.autor.nombre }} {{ user.autor.apellido }}</h5>
+        <h5>{{ user.autor.correo }}</h5>
+    </div>
+</div>
+{% endblock %}

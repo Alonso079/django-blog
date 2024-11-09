@@ -1,0 +1,118 @@
+{% extends 'dashboard/base/base.html' %}
+
+{% block title %} {{ post.title }} | Dashboard {% endblock %}
+
+{% block custom_css %}
+img {
+    width: 80%;
+    margin: 0 auto;
+    border-radius: 10px;
+}
+h5 {
+    padding-top: 30px;
+}
+h3 {
+    padding: 10px 0px;
+    color: black;
+}
+.text_div {
+    display: flex;
+    flex-wrap: wrap;
+}
+.text_div p {
+    padding: 5px;
+}
+{% endblock %}
+
+{% load static %}
+{% block body %}
+{% load humanize %}
+
+<div class="container-fluid">
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="alert alert-primary {{ message.tags }}">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col">
+            <div class="card shadow mb-4">
+                <div class="row" style="padding: 20px;">
+                    <div class="col-10 mx-auto">
+                        <h3>{{ post.title }}</h3>
+                        <div class="text_div">
+                            <p>Post Under: {{ post.categoria }}</p>
+                            <p>Date: {{ post.creado_en|naturaltime }}</p>
+                            {% if post.estado == 'activo' %}
+                            <p>Status: <span style="color: green;">{{ post.estado }}</span></p>
+                            {% else %}
+                            <p>Status: <span style="color: red; background-color: rgb(70, 123, 172); padding: 5px; border-radius: 10px;">{{ post.estado }}</span></p>
+                            {% endif %}
+                            {% if post.destacado %}
+                            <p>Featured: <span style="color: green;">Post Featured</span></p>
+                            {% else %}
+                            <p>Featured: <span style="color: red;">Not Featured Yet</span></p>
+                            {% endif %}
+                        </div>
+                        {% if post.imagen %}
+                        <img src="{{ post.imagen.url }}" alt="{{ post.title }}">
+                        {% else %}
+                        <img src="{% static 'images/placeholder.png' %}" alt="No Image Available">
+                        {% endif %}
+                        <h5>{{ post.detalle }}</h5>
+                        <div class="mt-3">
+                            {% if not post.visible %}
+                            <a href="{% url 'publicacion_visible' post.id %}" class="btn btn-outline-dark btn-sm">
+                                <i class="fas fa-eye"></i> Make Visible
+                            </a>
+                            {% else %}
+                            <a href="{% url 'ocultar_publicacion' post.id %}" class="btn btn-outline-dark btn-sm">
+                                <i class="fas fa-eye-slash"></i> Hide Post
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'editar_publicacion' post.id %}" class="btn btn-warning btn-sm">
+                                <i class="far fa-edit"></i> Edit
+                            </a>
+                            <a href="#" class="btn btn-danger btn-sm" data-toggle="modal" data-target="#delete">
+                                <i class="far fa-trash-alt"></i> Delete Post
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Deletion Confirmation -->
+    <div class="modal fade" id="delete" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel">Confirm Deletion</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <h4>Are you sure you want to delete the post?</h4>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <form action="{% url 'eliminar_publicacion' post.id %}" method="POST">
+                        {% csrf_token %}
+                        <input type="submit" class="btn btn-danger" value="Delete">
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

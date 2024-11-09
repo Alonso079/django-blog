@@ -1,0 +1,213 @@
+{% extends 'dashboard/base/base.html' %}
+
+{% block body %}
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Publicaciones Pendientes -->
+        <div class="col-lg-3 col-md-6 col-xs-6">
+            <div class="dashboard-stat color-1">
+                <div class="dashboard-stat-content">
+                    <h4>{{ post_pending_count }}</h4> 
+                    <span>Publicaciones Pendientes</span>
+                </div>
+                <div class="dashboard-stat-icon">
+                    <i class="im im-icon-Map2"></i>
+                </div>
+                <div class="dashboard-stat-item">
+                    <p>Tienes {{ post_pending_count }} publicaciones en la lista de pendientes</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Publicaciones Activas -->
+        <div class="col-lg-3 col-md-6 col-xs-6">
+            <div class="dashboard-stat color-4">
+                <div class="dashboard-stat-content">
+                    <h4>{{ post_active_count }}</h4>
+                    <span>Publicaciones Activas</span>
+                </div>
+                <div class="dashboard-stat-icon">
+                    <i class="im im-icon-Heart"></i>
+                </div>
+                <div class="dashboard-stat-item">
+                    <p>Tienes {{ post_active_count }} publicaciones activas</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total de Publicaciones -->
+        <div class="col-lg-3 col-md-6 col-xs-6">
+            <div class="dashboard-stat color-2">
+                <div class="dashboard-stat-content">
+                    <h4>{{ post_count }}</h4>
+                    <span>Total de Publicaciones</span>
+                </div>
+                <div class="dashboard-stat-icon">
+                    <i class="im im-icon-Line-Chart"></i>
+                </div>
+                <div class="dashboard-stat-item">
+                    <p>Tienes {{ post_count }} publicaciones en total</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total de Reseñas -->
+        <div class="col-lg-3 col-md-6 col-xs-6">
+            <div class="dashboard-stat color-3">
+                <div class="dashboard-stat-content">
+                    <h4>{{ total_reviews }}</h4>
+                    <span>Total de Reseñas</span>
+                </div>
+                <div class="dashboard-stat-icon">
+                    <i class="im im-icon-Add-UserStar"></i>
+                </div>
+                <div class="dashboard-stat-item">
+                    <p>Alguien ha guardado tu publicación!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if post %}
+    <div class="row">
+        <!-- Publicaciones Pendientes -->
+        <div class="col-lg-6 col-md-12 col-xs-12 traffic">
+            <div class="dashboard-list-box">
+                <h4 class="gray">Publicaciones Pendientes</h4>
+                {% if post_pending %}
+                <div class="table-box">
+                    <table class="basic-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Título de la Publicación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for post in post_pending %}
+                            <tr>
+                                <td>{{ post.creado_en | date:"d/m/Y" }}</td>
+                                <td>{{ post.titulo }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <h3 style="text-align: center; margin-top: 20px;">¡Felicidades! No tienes publicaciones pendientes</h3>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Publicaciones Activas -->
+        <div class="col-lg-6 col-md-12 col-xs-12 traffic">
+            <div class="dashboard-list-box">
+                <h4 class="gray">Publicaciones Activas</h4>
+                {% if post_active %}
+                <div class="table-box">
+                    <table class="basic-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Título de la Publicación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for post in post_active %}
+                            <tr>
+                                <td>{{ post.creado_en | date:"d/m/Y" }}</td>
+                                <td>{{ post.titulo }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <h3 style="text-align: center; margin-top: 20px;">No tienes publicaciones activas</h3>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <h2>Lo siento, no hay información de publicaciones para mostrar</h2>
+    {% endif %}
+
+    <div class="row">
+        <!-- Actividades Recientes -->
+        <div class="col-lg-7 col-md-12 col-xs-12 traffic">
+            <div class="dashboard-list-box with-icons margin-top-20">
+                <h4 class="gray">Actividades Recientes</h4>
+                <ul>
+                    <li>
+                        <i class="list-box-icon sl sl-icon-layers"></i> Tu publicación <strong><a href="#">Hotel Govendor</a></strong> ha sido aprobada.
+                        <a href="#" class="close-list-item"><i class="fa fa-close"></i></a>
+                    </li>
+                    <li>
+                        <i class="list-box-icon sl sl-icon-star"></i> Kathy Brown dejó una reseña <div class="numerical-rating" data-rating="5.0"></div> en <strong><a href="#">Burger House</a></strong>
+                        <a href="#" class="close-list-item"><i class="fa fa-close"></i></a>
+                    </li>
+                    <li>
+                        <i class="list-box-icon sl sl-icon-heart"></i> Alguien guardó tu <strong><a href="#">Burger House</a></strong> publicación.
+                        <a href="#" class="close-list-item"><i class="fa fa-close"></i></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Lista de Usuarios -->
+        <div class="col-lg-5 col-md-12 col-xs-12 traffic">
+            <div class="dashboard-list-box margin-top-20 user-list">
+                <h4 class="gray">Lista de Usuarios</h4>
+                <ul>
+                    <li>
+                        <div class="user-list-item">
+                            <div class="user-list-image">
+                                <img src="{% static 'images/comment.jpg' %}" alt="">
+                            </div>
+                            <div class="user-list-content">
+                                <h4>Loural Teak</h4>
+                                <span>Administrador de Publicaciones</span>
+                            </div>
+                            <div class="user-btns">
+                                <a href="#" class="button">Ver</a>
+                                <a href="#" class="button">Editar</a>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos de Tráfico -->
+    <div class="row">
+        <div class="col-lg-4 col-md-4 mar-b-30">
+            <div class="dashboard-list-box">
+                <h4 class="gray">Tráfico del Sitio</h4>
+                <div id="chartContainer" style="height: 250px; width: 100%;"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-4 mar-b-30">
+            <div class="dashboard-list-box">
+                <h4 class="gray">Gráfico de Barras</h4>
+                <div id="barchart" style="height: 250px; width: 100%;"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-4">
+            <div class="dashboard-list-box">
+                <h4 class="gray">Motores de Búsqueda</h4>
+                <div id="piechart" style="height: 250px; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Copyright -->
+<div class="copyrights">
+    <p>2024 <i class="fa fa-copyright" aria-hidden="true"></i> Suchana por <a href="https://www.cyclonethemes.com/" target="_blank">Cyclone Themes</a></p>
+</div>
+
+{% endblock %}
