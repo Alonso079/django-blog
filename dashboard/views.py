@@ -7,9 +7,21 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group, Permission
 from django.contrib.auth.hashers import make_password
 from django.db.models import Count, Sum, Q
+from django.contrib.contenttypes.models import ContentType
+
+# Crear grupo y permisos si no existen
+def create_autores_managers_group():
+    group, created = Group.objects.get_or_create(name='Autores Managers')
+    if created:
+        content_type = ContentType.objects.get_for_model(Autor)
+        permissions = Permission.objects.filter(content_type=content_type)
+        group.permissions.set(permissions)
+
+# Ejecutar la creación del grupo al iniciar la app
+create_autores_managers_group()
 
 # Vista del Panel de Usuario (Dashboard)
 class Dashboard(View):
@@ -31,6 +43,7 @@ class Dashboard(View):
         publicaciones = usuario.autor.blog_set.all()
         publicaciones_activas = publicaciones.filter(estado='activo')
         publicaciones_pendientes = publicaciones.filter(estado='pendiente')
+        publicaciones_aprobadas = publicaciones.filter(estado='aprobado')
         conteo_visitas = publicaciones.aggregate(Sum('conteo_visitas'))['conteo_visitas__sum']
 
         contexto = {
@@ -38,9 +51,11 @@ class Dashboard(View):
             'publicaciones': publicaciones,
             'publicaciones_activas': publicaciones_activas,
             'publicaciones_pendientes': publicaciones_pendientes,
+            'publicaciones_aprobadas': publicaciones_aprobadas,
             'conteo_publicaciones': publicaciones.count(),
             'conteo_activas': publicaciones_activas.count(),
             'conteo_pendientes': publicaciones_pendientes.count(),
+            'conteo_aprobadas': publicaciones_aprobadas.count(),
             'conteo_visitas': conteo_visitas,
         }
         return render(request, 'dashboard/dash/dashboard.html', contexto)
@@ -60,11 +75,14 @@ class CrearAutor(View):
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
 
-        usuario = User.objects.filter(username=username)
-        email_obj = Autor.objects.filter(correo=email)
+        usuario = User.objects.filter(username=username).exists()
+        email_obj = Autor.objects.filter(correo=email).exists()
 
         if usuario:
             messages.warning(request, '¡El nombre de usuario ya existe!')
+            return redirect('sign_up')
+        elif email_obj:
+            messages.warning(request, '¡El correo ya está registrado!')
             return redirect('sign_up')
         elif password1 != password2:
             messages.warning(request, 'Las contraseñas no coinciden')
@@ -72,11 +90,6 @@ class CrearAutor(View):
         else:
             nuevo_usuario = User(username=username, password=make_password(password1))
             nuevo_usuario.save()
-
-        if email_obj:
-            messages.warning(request, '¡El correo ya está registrado!')
-            return redirect('sign_up')
-        else:
             nuevo_autor = Autor(usuario=nuevo_usuario, correo=email, nombre=nombre, apellido=apellido)
             nuevo_autor.save()
             messages.success(request, 'Gracias por registrarte, por favor inicia sesión')
@@ -106,10 +119,15 @@ class EditarAutor(View):
 
     def post(self, request):
         obj = request.user.autor
+        email = request.POST.get('email')
+        if Autor.objects.filter(correo=email).exclude(id=obj.id).exists():
+            messages.error(request, 'Este correo ya está registrado con otro autor.')
+            return redirect('perfil')
+
+        obj.correo = email
         obj.imagen_autor = request.FILES.get('imagen')
         obj.nombre = request.POST.get('fname')
         obj.apellido = request.POST.get('lname')
-        obj.correo = request.POST.get('email')
         obj.save()
         messages.success(request, 'Tu perfil ha sido actualizado exitosamente')
         return redirect('perfil')
@@ -167,7 +185,6 @@ class ListarPublicacionesPendientes(View):
             'publicaciones_pendientes': publicaciones_pendientes
         }
         return render(request, 'dashboard/post/post_listing_pending.html', contexto)
-
 # Listar Publicaciones
 class ListarPublicaciones(View):
     @method_decorator(login_required(login_url='login'))
@@ -189,7 +206,7 @@ class VerPublicacion(View):
 
     def get(self, request, id):
         # Obtener la publicación o devolver un 404 si no existe
-        publicacion = get_object_or_404(Blog, id=id)
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
 
         # Crear el contexto para pasar a la plantilla
         contexto = {
@@ -198,7 +215,7 @@ class VerPublicacion(View):
 
         # Renderizar la plantilla con el contexto
         return render(request, 'dashboard/post/post_view.html', contexto)
-# Editar Publicación
+
 # Editar Publicación
 class EditarPublicacion(View):
     @method_decorator(login_required(login_url='login'))
@@ -206,7 +223,31 @@ class EditarPublicacion(View):
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request, id):
-        publicacion = get_object_or_404(Blog, id=id)
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
+        contexto = {
+            'post': publicacion
+        }
+        return render(request, 'dashboard/post/edit_post.html', contexto)
+
+    def post(self, request, id):
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
+        publicacion.titulo = request.POST.get('titulo')
+        publicacion.detalle = request.POST.get('detalle')
+        publicacion.imagen = request.FILES.get('imagen') if request.FILES.get('imagen') else publicacion.imagen
+        publicacion.categoria = Categoria.objects.get(id=request.POST.get('categoria')) if request.POST.get('categoria') else publicacion.categoria
+        publicacion.estado = request.POST.get('estado')
+        publicacion.save()
+        messages.success(request, 'La publicación ha sido actualizada exitosamente')
+        return redirect('ver_publicacion', id=publicacion.id)
+
+# Editar Publicación
+class EditarPublicacion(View):
+    @method_decorator(login_required(login_url='login'))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, id):
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
         categorias = Categoria.objects.all()
         contexto = {
             'obj': publicacion,  # Cambiado para que coincida con la plantilla
@@ -215,7 +256,7 @@ class EditarPublicacion(View):
         return render(request, 'dashboard/post/edit_post.html', contexto)
 
     def post(self, request, id):
-        publicacion = get_object_or_404(Blog, id=id)
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
         publicacion.titulo = request.POST.get('title')  # Cambiado para que coincida con el campo en el formulario
         publicacion.detalle = request.POST.get('detail')
         
@@ -233,6 +274,7 @@ class EditarPublicacion(View):
         publicacion.save()
         messages.success(request, 'Publicación actualizada exitosamente')
         return redirect('todas_publicaciones')
+
 # Eliminar Publicación
 class EliminarPublicacion(View):
     @method_decorator(login_required(login_url='login'))
@@ -240,7 +282,7 @@ class EliminarPublicacion(View):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, id):
-        publicacion = get_object_or_404(Blog, id=id)
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
         publicacion.delete()
         messages.success(request, 'Publicación eliminada exitosamente')
         return redirect('todas_publicaciones')
@@ -252,7 +294,7 @@ class HacerPublicacionVisible(View):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, id):
-        publicacion = get_object_or_404(Blog, id=id)
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
         publicacion.visible = True
         publicacion.save()
         messages.success(request, 'La publicación ahora es visible')
@@ -265,7 +307,7 @@ class OcultarPublicacion(View):
         return super().dispatch(request, *args, **kwargs)
 
     def post(self, request, id):
-        publicacion = get_object_or_404(Blog, id=id)
+        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
         publicacion.visible = False
         publicacion.save()
         messages.success(request, 'La publicación ha sido ocultada')
@@ -296,7 +338,6 @@ class CrearPublicacion(View):
         nueva_publicacion.save()
         messages.success(request, 'Publicación creada exitosamente')
         return redirect('todas_publicaciones')
-
 # Crear Categoría
 class CrearCategoria(View):
     @method_decorator(login_required(login_url='login'))
@@ -460,3 +501,36 @@ class ListarCategorias(View):
             'categorias': categorias
         }
         return render(request, 'blogs/category/category.html', contexto)
+# Crear Publicación
+class CrearPublicacionUser(View):
+    @method_decorator(login_required(login_url='login'))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):  # Vista para crear publicación por el usuario
+        categorias = Categoria.objects.all()
+        etiquetas = Etiqueta.objects.all()
+        contexto = {
+            'categorias': categorias,
+            'tags': etiquetas
+        }
+        return render(request, 'dashboard/post/create_post_user.html', contexto)
+
+    def post(self, request):
+        autor = request.user.autor
+        titulo = request.POST.get('title')
+        detalle = request.POST.get('detail')
+        imagen = request.FILES.get('image')
+        categoria_id = request.POST.get('category')
+        categoria = get_object_or_404(Categoria, id=categoria_id)
+
+        nueva_publicacion = Blog(autor=autor, titulo=titulo, detalle=detalle, imagen=imagen, categoria=categoria)
+        nueva_publicacion.save()
+
+        etiquetas_ids = request.POST.getlist('tags')
+        if etiquetas_ids:
+            etiquetas = Etiqueta.objects.filter(id__in=etiquetas_ids)
+            nueva_publicacion.etiquetas.set(etiquetas)
+
+        messages.success(request, 'Publicación creada exitosamente')
+        return redirect('todas_publicaciones')
