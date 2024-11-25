@@ -1,28 +1,22 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponseRedirect
 from django.views import View
-from blog.models import Blog, Categoria, Etiqueta
-from .models import Autor
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
-from django.contrib.auth.models import User, Group, Permission
+from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password
 from django.db.models import Count, Sum, Q
-from django.contrib.contenttypes.models import ContentType
+from django.core.paginator import Paginator
 
-# Crear grupo y permisos si no existen
-def create_autores_managers_group():
-    group, created = Group.objects.get_or_create(name='Autores Managers')
-    if created:
-        content_type = ContentType.objects.get_for_model(Autor)
-        permissions = Permission.objects.filter(content_type=content_type)
-        group.permissions.set(permissions)
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import TemplateView, UpdateView
+from django.urls import reverse_lazy
 
-# Ejecutar la creación del grupo al iniciar la app
-create_autores_managers_group()
-
+from blog.models import Blog, Categoria, Etiqueta
+from .models import Autor
+from .forms import EditarAutorForm, CrearPublicacionForm
 # Vista del Panel de Usuario (Dashboard)
 class Dashboard(View):
     @method_decorator(login_required(login_url='login'))
@@ -43,7 +37,6 @@ class Dashboard(View):
         publicaciones = usuario.autor.blog_set.all()
         publicaciones_activas = publicaciones.filter(estado='activo')
         publicaciones_pendientes = publicaciones.filter(estado='pendiente')
-        publicaciones_aprobadas = publicaciones.filter(estado='aprobado')
         conteo_visitas = publicaciones.aggregate(Sum('conteo_visitas'))['conteo_visitas__sum']
 
         contexto = {
@@ -51,11 +44,9 @@ class Dashboard(View):
             'publicaciones': publicaciones,
             'publicaciones_activas': publicaciones_activas,
             'publicaciones_pendientes': publicaciones_pendientes,
-            'publicaciones_aprobadas': publicaciones_aprobadas,
             'conteo_publicaciones': publicaciones.count(),
             'conteo_activas': publicaciones_activas.count(),
             'conteo_pendientes': publicaciones_pendientes.count(),
-            'conteo_aprobadas': publicaciones_aprobadas.count(),
             'conteo_visitas': conteo_visitas,
         }
         return render(request, 'dashboard/dash/dashboard.html', contexto)
@@ -75,14 +66,11 @@ class CrearAutor(View):
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
 
-        usuario = User.objects.filter(username=username).exists()
-        email_obj = Autor.objects.filter(correo=email).exists()
+        usuario = User.objects.filter(username=username)
+        email_obj = Autor.objects.filter(correo=email)
 
         if usuario:
             messages.warning(request, '¡El nombre de usuario ya existe!')
-            return redirect('sign_up')
-        elif email_obj:
-            messages.warning(request, '¡El correo ya está registrado!')
             return redirect('sign_up')
         elif password1 != password2:
             messages.warning(request, 'Las contraseñas no coinciden')
@@ -90,48 +78,44 @@ class CrearAutor(View):
         else:
             nuevo_usuario = User(username=username, password=make_password(password1))
             nuevo_usuario.save()
+
+        if email_obj:
+            messages.warning(request, '¡El correo ya está registrado!')
+            return redirect('sign_up')
+        else:
             nuevo_autor = Autor(usuario=nuevo_usuario, correo=email, nombre=nombre, apellido=apellido)
             nuevo_autor.save()
             messages.success(request, 'Gracias por registrarte, por favor inicia sesión')
             return redirect('login')
 
 # Perfil del Autor
-class PerfilAutor(View):
-    @method_decorator(login_required(login_url='login'))
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
+class PerfilAutor(LoginRequiredMixin, TemplateView):
+    template_name = 'dashboard/user/profile.html'
+    login_url = 'login'
 
-    def get(self, request):
-        autor = request.user
-        contexto = {
-            'autor': autor
-        }
-        return render(request, 'dashboard/user/profile.html', contexto)
-
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['autor'] = self.request.user
+        return context
 # Editar Perfil del Autor
-class EditarAutor(View):
-    @method_decorator(login_required(login_url='login'))
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
 
-    def get(self, request):
-        return render(request, 'dashboard/user/edit_profile.html')
+class EditarAutor(LoginRequiredMixin, UpdateView):
+    model = Autor
+    form_class = EditarAutorForm
+    template_name = 'dashboard/user/edit_profile.html'
+    login_url = 'login'
+    success_url = reverse_lazy('perfil')
 
-    def post(self, request):
-        obj = request.user.autor
-        email = request.POST.get('email')
-        if Autor.objects.filter(correo=email).exclude(id=obj.id).exists():
-            messages.error(request, 'Este correo ya está registrado con otro autor.')
-            return redirect('perfil')
+    def get_object(self, queryset=None):
+        return self.request.user.autor
 
-        obj.correo = email
-        obj.imagen_autor = request.FILES.get('imagen')
-        obj.nombre = request.POST.get('fname')
-        obj.apellido = request.POST.get('lname')
-        obj.save()
-        messages.success(request, 'Tu perfil ha sido actualizado exitosamente')
-        return redirect('perfil')
+    def form_valid(self, form):
+        messages.success(self.request, 'Tu perfil ha sido actualizado exitosamente')
+        return super().form_valid(form)
 
+    def form_invalid(self, form):
+        messages.error(self.request, 'Hubo un error al actualizar tu perfil. Por favor verifica los campos e inténtalo de nuevo.')
+        return super().form_invalid(form)
 # Vista de Inicio de Sesión (Login)
 class VistaLogin(View):
     def get(self, request, *args, **kwargs):
@@ -185,6 +169,7 @@ class ListarPublicacionesPendientes(View):
             'publicaciones_pendientes': publicaciones_pendientes
         }
         return render(request, 'dashboard/post/post_listing_pending.html', contexto)
+
 # Listar Publicaciones
 class ListarPublicaciones(View):
     @method_decorator(login_required(login_url='login'))
@@ -239,7 +224,6 @@ class EditarPublicacion(View):
         publicacion.save()
         messages.success(request, 'La publicación ha sido actualizada exitosamente')
         return redirect('ver_publicacion', id=publicacion.id)
-
 # Editar Publicación
 class EditarPublicacion(View):
     @method_decorator(login_required(login_url='login'))
@@ -317,27 +301,45 @@ class OcultarPublicacion(View):
 class CrearPublicacion(View):
     @method_decorator(login_required(login_url='login'))
     def dispatch(self, request, *args, **kwargs):
+        # Verificar si el usuario tiene un perfil de Autor, si no, crear uno
+        if not hasattr(request.user, 'autor'):
+            Autor.objects.create(usuario=request.user)
         return super().dispatch(request, *args, **kwargs)
 
     def get(self, request):
         categorias = Categoria.objects.all()
+        etiquetas = Etiqueta.objects.all()
+        form = CrearPublicacionForm()
+
         contexto = {
-            'categorias': categorias
+            'categorias': categorias,
+            'etiquetas': etiquetas,
+            'form': form
         }
         return render(request, 'dashboard/post/create_post.html', contexto)
 
     def post(self, request):
-        autor = request.user.autor
-        titulo = request.POST.get('titulo')
-        detalle = request.POST.get('detalle')
-        imagen = request.FILES.get('imagen')
-        categoria_id = request.POST.get('categoria')
-        categoria = get_object_or_404(Categoria, id=categoria_id)
+        form = CrearPublicacionForm(request.POST, request.FILES)
 
-        nueva_publicacion = Blog(autor=autor, titulo=titulo, detalle=detalle, imagen=imagen, categoria=categoria)
-        nueva_publicacion.save()
-        messages.success(request, 'Publicación creada exitosamente')
-        return redirect('todas_publicaciones')
+        if form.is_valid():
+            nueva_publicacion = form.save(commit=False)
+            nueva_publicacion.autor = request.user.autor  # Establecer el autor como el usuario actual
+            nueva_publicacion.save()
+            form.save_m2m()  # Guardar las relaciones ManyToMany como etiquetas
+
+            messages.success(request, 'Publicación creada exitosamente')
+            return redirect('todas_publicaciones')
+        else:
+            categorias = Categoria.objects.all()
+            etiquetas = Etiqueta.objects.all()
+
+            contexto = {
+                'categorias': categorias,
+                'etiquetas': etiquetas,
+                'form': form
+            }
+            messages.error(request, 'Error al crear la publicación. Por favor revisa los campos.')
+            return render(request, 'dashboard/post/create_post.html', contexto)
 # Crear Categoría
 class CrearCategoria(View):
     @method_decorator(login_required(login_url='login'))
@@ -490,47 +492,22 @@ class VistaEtiqueta(View):
         return render(request, 'dashboard/tag/tag.html', contexto)
 
 # Listar Categorías
-class ListarCategorias(View):
-    @method_decorator(login_required(login_url='login'))
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
+class ListarCategorias(LoginRequiredMixin, View):
+    login_url = 'login'
 
     def get(self, request, *args, **kwargs):
+        # Obtener todas las categorías ordenadas por id descendente
         categorias = Categoria.objects.all().order_by('-id')
+
+        # Paginación: 10 categorías por página
+        paginator = Paginator(categorias, 10)
+        page_number = request.GET.get('page')
+        page_obj = paginator.get_page(page_number)
+
+        # Contexto a pasar al template
         contexto = {
-            'categorias': categorias
+            'categorias': page_obj,
         }
+
         return render(request, 'blogs/category/category.html', contexto)
-# Crear Publicación
-class CrearPublicacionUser(View):
-    @method_decorator(login_required(login_url='login'))
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
 
-    def get(self, request):  # Vista para crear publicación por el usuario
-        categorias = Categoria.objects.all()
-        etiquetas = Etiqueta.objects.all()
-        contexto = {
-            'categorias': categorias,
-            'tags': etiquetas
-        }
-        return render(request, 'dashboard/post/create_post_user.html', contexto)
-
-    def post(self, request):
-        autor = request.user.autor
-        titulo = request.POST.get('title')
-        detalle = request.POST.get('detail')
-        imagen = request.FILES.get('image')
-        categoria_id = request.POST.get('category')
-        categoria = get_object_or_404(Categoria, id=categoria_id)
-
-        nueva_publicacion = Blog(autor=autor, titulo=titulo, detalle=detalle, imagen=imagen, categoria=categoria)
-        nueva_publicacion.save()
-
-        etiquetas_ids = request.POST.getlist('tags')
-        if etiquetas_ids:
-            etiquetas = Etiqueta.objects.filter(id__in=etiquetas_ids)
-            nueva_publicacion.etiquetas.set(etiquetas)
-
-        messages.success(request, 'Publicación creada exitosamente')
-        return redirect('todas_publicaciones')

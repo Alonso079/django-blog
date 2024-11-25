@@ -92,19 +92,42 @@ class SubscripcionView(View):
 
 
 # Vista de Búsqueda (BuscarView)
+from django.db.models import Count
+
 class BuscarView(View):
     def get(self, request, *args, **kwargs):
         consulta = request.GET.get('q', '').strip()
-        resultados = Blog.objects.filter(estado='activo', visible=True).filter(
-            Q(titulo__icontains=consulta) |
-            Q(categoria__nombre__icontains=consulta) |
-            Q(detalle__icontains=consulta)
-        ) if consulta and len(consulta) <= 100 else Blog.objects.none()
+        resultados = Blog.objects.filter(estado='activo', visible=True)
+
+        if consulta:
+            # Solo realizar la búsqueda si la consulta tiene menos de 100 caracteres
+            if len(consulta) <= 100:
+                resultados = resultados.filter(
+                    Q(titulo__icontains=consulta) |
+                    Q(categoria__nombre__icontains=consulta) |
+                    Q(detalle__icontains=consulta)
+                )
+            else:
+                # Mostrar un mensaje si la consulta es demasiado larga
+                return render(request, 'home/search.html', {
+                    'consulta': consulta,
+                    'mensaje': 'La búsqueda debe tener menos de 100 caracteres.',
+                    'total_resultados': 0
+                })
+
+        # Limitar el número de resultados para evitar sobrecarga
+        resultados = resultados[:50]
 
         contexto = {
             'publicaciones': resultados,
-            'consulta': consulta
+            'consulta': consulta,
+            'total_resultados': len(resultados) if consulta else 0
         }
+
+        # Mostrar un mensaje si no se encuentran resultados
+        if consulta and not resultados:
+            contexto['mensaje'] = 'No se encontraron resultados para tu búsqueda.'
+
         return render(request, 'home/search.html', contexto)
 
 

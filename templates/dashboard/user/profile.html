@@ -1,42 +1,64 @@
 {% extends 'dashboard/base/base.html' %}
+
 {% block title %} {{ user.autor.usuario.username }} | Perfil {% endblock %}
+
 {% block custom_css %}
-.p_image{
-    width:100%;
-    height:auto;
-    border-radius:20px;
-}
-.btn a{
-    color:white;
-}
-.main_wrapper{
-    height:100vh;
-}
+<style>
+    .p_image-container {
+        width: 100%;
+        max-width: 250px; /* Tamaño máximo para limitar la escala */
+        height: auto;
+        aspect-ratio: 1; /* Mantener la proporción 1:1 */
+        overflow: hidden;
+        border-radius: 20px;
+    }
+    .p_image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* Asegura que la imagen llene el contenedor sin distorsionarse */
+        border-radius: 20px;
+    }
+    .btn-edit a {
+        color: white;
+    }
+    .main_wrapper {
+        min-height: 100vh;
+    }
+</style>
 {% endblock %}
 
 {% block body %}
-<div class="col">
+<div class="container pt-4">
     {% if messages %}
-    <div class="messages">
-        {% for message in messages %}
-        <div class="alert alert-primary" {% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</div>
-        {% endfor %}
-    </div>
+        <div class="messages">
+            {% for message in messages %}
+                <div class="alert alert-primary {{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        </div>
     {% endif %}
-</div>
-<div class="row main_wrapper">
-    <div class="col-6 col-md-4">
-        {% if user.autor.imagen_autor %}
-        <img class="p_image" src="{{ user.autor.imagen_autor.url }}" alt="">
-        {% else %}
-        <img class="p_image" src="https://genslerzudansdentistry.com/wp-content/uploads/2015/11/anonymous-user.png" alt="">
-        {% endif %}
-    </div>
-    <div class="col-12 col-md-8">
-        <button class="btn btn-dark float-right btn-sm"><a href="{% url 'editar_perfil' %}"> <i class="far fa-edit"></i> Editar perfil </a></button>
-        <h3>@{{ user.autor.usuario.username }}</h3>
-        <h5>{{ user.autor.nombre }} {{ user.autor.apellido }}</h5>
-        <h5>{{ user.autor.correo }}</h5>
+    
+    <div class="row main_wrapper">
+        <div class="col-12 col-md-4 mb-4 d-flex justify-content-center">
+            <div class="p_image-container">
+                {% if user.autor.imagen_autor %}
+                    <img class="p_image" src="{{ user.autor.imagen_autor.url }}" alt="Imagen de perfil">
+                {% else %}
+                    <img class="p_image" src="https://genslerzudansdentistry.com/wp-content/uploads/2015/11/anonymous-user.png" alt="Imagen de perfil">
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-12 col-md-8">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <h3>@{{ user.autor.usuario.username }}</h3>
+                <button class="btn btn-dark btn-sm btn-edit">
+                    <a href="{% url 'editar_perfil' %}"><i class="far fa-edit"></i> Editar perfil</a>
+                </button>
+            </div>
+            <h5>{{ user.autor.nombre }} {{ user.autor.apellido }}</h5>
+            <h5>{{ user.autor.correo }}</h5>
+        </div>
     </div>
 </div>
 {% endblock %}

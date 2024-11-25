@@ -16,7 +16,6 @@ urlpatterns = [
     path('publicaciones-pendientes/', views.ListarPublicacionesPendientes.as_view(), name='publicaciones_pendientes'),
     path('publicacion/visible/<str:id>/', views.HacerPublicacionVisible.as_view(), name='publicacion_visible'),
     path('publicacion/ocultar/<str:id>/', views.OcultarPublicacion.as_view(), name='ocultar_publicacion'),
-    path('dashboard/crear-publicacion-usuario/', views.CrearPublicacionUser.as_view(), name='crear_publicacion_usuario'),
 
 
     # Autor

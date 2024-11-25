@@ -23,7 +23,7 @@
         </div>
         <div class="row" style="padding: 20px;">
             <div class="col-10 mx-auto">
-                {% if perms.blog.add_blog %}
+                {% if user.is_authenticated %}
                 <form action="{% url 'crear_publicacion' %}" method="POST" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="form-group">
@@ -32,7 +32,7 @@
                     </div>
                     <div class="form-group">
                         <label for="detail">Detalles del Blog</label>
-                        <textarea class="form-control" id="detail" name='detail' rows="10" placeholder="Agregar Detalles del Blog" required></textarea>
+                        <textarea class="form-control" id="detail" name="detail" rows="10" placeholder="Agregar Detalles del Blog" required></textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="customFile">Agregar Imagen Destacada</label>
@@ -43,16 +43,14 @@
                         <select class="form-control" id="exampleFormControlSelect1" name="category">
                             <option value=""> Seleccionar Categoría</option>
                             {% for cat in categorias %}
-                                {% if perms.blog.view_categoria or not cat.restringida %}
-                                    <option value="{{ cat.id }}">{{ cat.nombre }}</option>
-                                {% endif %}
+                                <option value="{{ cat.id }}">{{ cat.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="tags">Seleccionar Etiquetas</label>
                         <select class="form-control" id="tags" name="tags" multiple>
-                            {% for tag in tags %}
+                            {% for tag in etiquetas %}
                                 <option value="{{ tag.id }}">{{ tag.nombre }}</option>
                             {% endfor %}
                         </select>
@@ -60,7 +58,7 @@
                     <input type="submit" value="Enviar" class="btn btn-primary">
                 </form>
                 {% else %}
-                    <p class="text-danger">No tienes permisos para crear una publicación de blog.</p>
+                    <p class="text-danger">Debes iniciar sesión para crear una publicación de blog.</p>
                 {% endif %}
             </div>
         </div>
