@@ -78,12 +78,12 @@ import pymysql
 pymysql.install_as_MySQLdb()
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('POSTGRES_DB', 'django'),  # Nombre de la base de datos por defecto
-        'USER': os.getenv('POSTGRES_USER', 'diogenes'),  # Usuario de la base de datos
+        'USER': os.getenv('POSTGRES_USER', 'django_user'),  # Usuario de la base de datos
         'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Cfwt6593@1'),  # Contraseña de la base de datos
         'HOST': os.getenv('POSTGRES_HOST', '192.168.100.58'),  # Host de la base de datos
-        'PORT': os.getenv('POSTGRES_PORT', '3306'),  # Puerto por defecto de PostgreSQL
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),  # Puerto por defecto de PostgreSQL
     }
 }
 # Validación de contraseñas

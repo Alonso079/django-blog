@@ -1,10 +1,6 @@
+# blog/models.py
 from django.db import models
-from django.contrib.auth.models import User
-
-
-from django.db import models
-from django.contrib.auth.models import User
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import User, Group, Permission
 from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.models import ContentType
 
@@ -30,8 +26,27 @@ class Autor(models.Model):
     def __str__(self):
         return self.usuario.username
 
-# Configuración del administrador para Autor
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Asignar al grupo 'Autor' por defecto si no tiene grupo
+        autor_group, _ = Group.objects.get_or_create(name='Autor')
+        if not self.usuario.groups.filter(name='Autor').exists():
+            self.usuario.groups.add(autor_group)
+
+# blog/views.py
+from django.contrib.auth.decorators import permission_required
+from django.shortcuts import render
+from .models import Autor
+
+@permission_required('blog.can_view_author', raise_exception=True)
+def lista_autores(request):
+    # Vista que solo pueden ver usuarios con el permiso 'can_view_author'
+    autores = Autor.objects.all()
+    return render(request, 'blog/lista_autores.html', {'autores': autores})
+
+# blog/admin.py
 from django.contrib import admin
+from .models import Autor
 
 @admin.register(Autor)
 class AutorAdmin(admin.ModelAdmin):
@@ -53,7 +68,7 @@ class AutorAdmin(admin.ModelAdmin):
         # Permitir la visualización según los permisos del usuario
         if request.user.is_superuser:
             return True
-        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('app.can_view_author'):
+        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('blog.can_view_author'):
             return True
         return False
 
@@ -61,7 +76,7 @@ class AutorAdmin(admin.ModelAdmin):
         # Permitir la edición según los permisos del usuario
         if request.user.is_superuser:
             return True
-        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('app.can_edit_author'):
+        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('blog.can_edit_author'):
             return True
         return False
 
@@ -69,7 +84,7 @@ class AutorAdmin(admin.ModelAdmin):
         # Permitir la eliminación según los permisos del usuario
         if request.user.is_superuser:
             return True
-        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('app.can_delete_author'):
+        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('blog.can_delete_author'):
             return True
         return False
 
@@ -77,19 +92,19 @@ class AutorAdmin(admin.ModelAdmin):
         # Controlar el acceso a la sección de Autores en el menú del administrador
         if request.user.is_superuser:
             return True
-        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('app.can_view_author'):
+        if request.user.groups.filter(name='Autores Managers').exists() or request.user.has_perm('blog.can_view_author'):
             return True
         return False
 
     def get_readonly_fields(self, request, obj=None):
         # Hacer que ciertos campos sean de solo lectura si el usuario no tiene permisos de edición
-        if not request.user.is_superuser and not request.user.groups.filter(name='Autores Managers').exists() and not request.user.has_perm('app.can_edit_author'):
+        if not request.user.is_superuser and not request.user.groups.filter(name='Autores Managers').exists() and not request.user.has_perm('blog.can_edit_author'):
             return [f.name for f in self.model._meta.fields]
         return super().get_readonly_fields(request, obj)
 
     def get_fields(self, request, obj=None):
         # Restringir los campos visibles según los permisos del usuario
         fields = super().get_fields(request, obj)
-        if not request.user.is_superuser and not request.user.groups.filter(name='Autores Managers').exists() and not request.user.has_perm('app.can_edit_author'):
+        if not request.user.is_superuser and not request.user.groups.filter(name='Autores Managers').exists() and not request.user.has_perm('blog.can_edit_author'):
             return [f for f in fields if f not in ['correo', 'imagen_autor']]
         return fields

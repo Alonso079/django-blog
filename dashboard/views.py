@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponseRedirect
 from django.views import View
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth import authenticate, login, logout
 from django.utils.decorators import method_decorator
 from django.contrib.auth.models import User
@@ -17,9 +17,11 @@ from django.urls import reverse_lazy
 from blog.models import Blog, Categoria, Etiqueta
 from .models import Autor
 from .forms import EditarAutorForm, CrearPublicacionForm
+
 # Vista del Panel de Usuario (Dashboard)
 class Dashboard(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_author', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -97,8 +99,8 @@ class PerfilAutor(LoginRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
         context['autor'] = self.request.user
         return context
-# Editar Perfil del Autor
 
+# Editar Perfil del Autor
 class EditarAutor(LoginRequiredMixin, UpdateView):
     model = Autor
     form_class = EditarAutorForm
@@ -116,6 +118,7 @@ class EditarAutor(LoginRequiredMixin, UpdateView):
     def form_invalid(self, form):
         messages.error(self.request, 'Hubo un error al actualizar tu perfil. Por favor verifica los campos e inténtalo de nuevo.')
         return super().form_invalid(form)
+
 # Vista de Inicio de Sesión (Login)
 class VistaLogin(View):
     def get(self, request, *args, **kwargs):
@@ -137,6 +140,7 @@ class VistaLogin(View):
 # Vista de Cierre de Sesión (Logout)
 class VistaLogout(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_author', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -147,6 +151,7 @@ class VistaLogout(View):
 # Listar Publicaciones Activas
 class ListarPublicacionesActivas(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_author', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -160,6 +165,7 @@ class ListarPublicacionesActivas(View):
 # Listar Publicaciones Pendientes
 class ListarPublicacionesPendientes(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_author', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -173,6 +179,7 @@ class ListarPublicacionesPendientes(View):
 # Listar Publicaciones
 class ListarPublicaciones(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_author', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -186,6 +193,7 @@ class ListarPublicaciones(View):
 # Ver Publicación
 class VerPublicacion(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_author', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -200,33 +208,10 @@ class VerPublicacion(View):
 
         # Renderizar la plantilla con el contexto
         return render(request, 'dashboard/post/post_view.html', contexto)
-
 # Editar Publicación
 class EditarPublicacion(View):
     @method_decorator(login_required(login_url='login'))
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
-
-    def get(self, request, id):
-        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
-        contexto = {
-            'post': publicacion
-        }
-        return render(request, 'dashboard/post/edit_post.html', contexto)
-
-    def post(self, request, id):
-        publicacion = get_object_or_404(Blog, id=id, autor=request.user.autor)
-        publicacion.titulo = request.POST.get('titulo')
-        publicacion.detalle = request.POST.get('detalle')
-        publicacion.imagen = request.FILES.get('imagen') if request.FILES.get('imagen') else publicacion.imagen
-        publicacion.categoria = Categoria.objects.get(id=request.POST.get('categoria')) if request.POST.get('categoria') else publicacion.categoria
-        publicacion.estado = request.POST.get('estado')
-        publicacion.save()
-        messages.success(request, 'La publicación ha sido actualizada exitosamente')
-        return redirect('ver_publicacion', id=publicacion.id)
-# Editar Publicación
-class EditarPublicacion(View):
-    @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_change_blog', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -262,6 +247,7 @@ class EditarPublicacion(View):
 # Eliminar Publicación
 class EliminarPublicacion(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_delete_blog', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -274,6 +260,7 @@ class EliminarPublicacion(View):
 # Hacer Publicación Visible
 class HacerPublicacionVisible(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_change_blog', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -287,6 +274,7 @@ class HacerPublicacionVisible(View):
 # Ocultar Publicación
 class OcultarPublicacion(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_change_blog', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -300,6 +288,7 @@ class OcultarPublicacion(View):
 # Crear Publicación
 class CrearPublicacion(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_add_blog', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         # Verificar si el usuario tiene un perfil de Autor, si no, crear uno
         if not hasattr(request.user, 'autor'):
@@ -343,6 +332,7 @@ class CrearPublicacion(View):
 # Crear Categoría
 class CrearCategoria(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_add_categoria', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -362,6 +352,7 @@ class CrearCategoria(View):
 # Actualizar Categoría
 class ActualizarCategoria(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_change_categoria', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -374,6 +365,7 @@ class ActualizarCategoria(View):
 # Eliminar Categoría
 class EliminarCategoria(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_delete_categoria', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -386,6 +378,7 @@ class EliminarCategoria(View):
 # Crear Etiqueta
 class CrearEtiqueta(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_add_etiqueta', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -405,6 +398,7 @@ class CrearEtiqueta(View):
 # Actualizar Etiqueta
 class ActualizarEtiqueta(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_change_etiqueta', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -417,6 +411,7 @@ class ActualizarEtiqueta(View):
 # Eliminar Etiqueta
 class EliminarEtiqueta(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_delete_etiqueta', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -429,6 +424,7 @@ class EliminarEtiqueta(View):
 # Listar Etiquetas
 class ListarEtiquetas(View):
     @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_etiqueta', raise_exception=True))
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
@@ -476,9 +472,13 @@ class BuscarView(View):
             'resultados': resultados,
         }
         return render(request, 'home/search.html', contexto)
-
 # Vista de Etiqueta
 class VistaEtiqueta(View):
+    @method_decorator(login_required(login_url='login'))
+    @method_decorator(permission_required('blog.can_view_etiqueta', raise_exception=True))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, id, *args, **kwargs):
         etiqueta = get_object_or_404(Etiqueta, id=id)
         publicaciones = etiqueta.blog_set.all().order_by('-id')
@@ -495,6 +495,10 @@ class VistaEtiqueta(View):
 class ListarCategorias(LoginRequiredMixin, View):
     login_url = 'login'
 
+    @method_decorator(permission_required('blog.can_view_categoria', raise_exception=True))
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
     def get(self, request, *args, **kwargs):
         # Obtener todas las categorías ordenadas por id descendente
         categorias = Categoria.objects.all().order_by('-id')
@@ -510,4 +514,3 @@ class ListarCategorias(LoginRequiredMixin, View):
         }
 
         return render(request, 'blogs/category/category.html', contexto)
-
